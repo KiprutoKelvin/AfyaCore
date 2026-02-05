@@ -4,6 +4,7 @@ import com.kipruto.patientservice.dto.PatientRequestDTO;
 import com.kipruto.patientservice.dto.PatientResponseDTO;
 import com.kipruto.patientservice.exception.EmailAlreadyExistsException;
 import com.kipruto.patientservice.exception.PatientNotFoundException;
+import com.kipruto.patientservice.grpc.BillingServiceGrpcClient;
 import com.kipruto.patientservice.mapper.PatientMapper;
 import com.kipruto.patientservice.model.Patient;
 import com.kipruto.patientservice.repository.PatientRepository;
@@ -16,9 +17,11 @@ import java.util.UUID;
 @Service
 public class PatientService {
     private final PatientRepository patientRepository;
+    private final BillingServiceGrpcClient billingServiceGrpcClient;
 
-    public PatientService(PatientRepository patientRepository) {
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
         this.patientRepository = patientRepository;
+        this.billingServiceGrpcClient = billingServiceGrpcClient;
     }
 
     public List<PatientResponseDTO> getAllPatients() {
@@ -33,6 +36,8 @@ public class PatientService {
             throw new EmailAlreadyExistsException("A patient with this Email" + " already exist " + patientRequestDTO.getEmail());
         }
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientRequestDTO));
+
+        billingServiceGrpcClient.createBillingAccount(newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
 
         return PatientMapper.toDTO(newPatient);
     }
